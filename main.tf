@@ -1,77 +1,44 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-  required_version = ">= 1.5.0"
-}
-
 provider "aws" {
-  region = "eu-central-1" # Frankfurt
+  region = "us-east-1"
 }
 
-# --------------------
-# IAM USERS
-# --------------------
+# IAM role
+resource "aws_iam_role" "helpdesk_role" {
+  name = "helpdesk-role"
 
-resource "aws_iam_user" "user1" {
-  name = "az104-user1"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = { Service = "ec2.amazonaws.com" },
+      Action = "sts:AssumeRole"
+    }]
+  })
 }
 
-resource "aws_iam_user" "user2" {
-  name = "az104-user2"
-}
-
-# --------------------
-# IAM GROUP
-# --------------------
-
-resource "aws_iam_group" "it_admins" {
-  name = "IT-Lab-Administrators"
-}
-
-# --------------------
-# GROUP MEMBERSHIP
-# --------------------
-
-resource "aws_iam_group_membership" "admins_membership" {
-  name = "it-admins-membership"
-
-  users = [
-    aws_iam_user.user1.name,
-    aws_iam_user.user2.name
-  ]
-
-  group = aws_iam_group.it_admins.name
-}
-
-# --------------------
-# POLICY 
-# --------------------
-
-resource "aws_iam_policy" "lab_policy" {
-  name        = "ITLabReadOnly"
-  description = "Read-only access for lab administrators"
+# Policy
+resource "aws_iam_policy" "helpdesk_policy" {
+  name = "helpdesk-policy"
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
-          "ec2:Describe*",
-          "s3:List*",
-          "iam:Get*"
-        ]
+        Effect = "Allow",
+        Action = ["ec2:RunInstances", "ec2:DescribeInstances"],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = ["support:CreateCase"],
         Resource = "*"
       }
     ]
   })
 }
 
-resource "aws_iam_group_policy_attachment" "attach_policy" {
-  group      = aws_iam_group.it_admins.name
-  policy_arn = aws_iam_policy.lab_policy.arn
+# Attach
+resource "aws_iam_role_policy_attachment" "attach" {
+  role       = aws_iam_role.helpdesk_role.name
+  policy_arn = aws_iam_policy.helpdesk_policy.arn
 }
