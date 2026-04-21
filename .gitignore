@@ -4,7 +4,7 @@
 *.tfstate.*
 .crash.log
 terraform.tfvars
-
+.terraform.lock.hcl
 # OS
 .DS_Store
 Thumbs.db
